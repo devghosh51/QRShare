@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>QR-Share</title>
+  <meta name="description" content="Send text and small files between phones using only a screen and a camera. No internet, Wi-Fi or Bluetooth.">
+  <meta name="theme-color" content="#E6ECEE">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <svg class="glyph" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="2" y="2" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="3"/>
+      <rect x="19" y="2" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="3"/>
+      <rect x="2" y="19" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="3"/>
+      <rect x="6" y="6" width="3" height="3" fill="currentColor"/>
+      <rect x="23" y="6" width="3" height="3" fill="currentColor"/>
+      <rect x="6" y="23" width="3" height="3" fill="currentColor"/>
+      <rect x="19" y="19" width="4" height="4" fill="#1D4BFF"/>
+      <rect x="26" y="19" width="4" height="4" fill="currentColor"/>
+      <rect x="19" y="26" width="4" height="4" fill="currentColor"/>
+      <rect x="26" y="26" width="4" height="4" fill="#1D4BFF"/>
+    </svg>
+    <div>
+      <h1>QR-Share</h1>
+      <p class="tagline">Send text and small files between phones with just a screen and a camera.</p>
+    </div>
+  </header>
+
+  <div class="switch" role="tablist" aria-label="Mode">
+    <button id="tab-send" role="tab" aria-selected="true" aria-controls="panel-send">Send</button>
+    <button id="tab-receive" role="tab" aria-selected="false" aria-controls="panel-receive" tabindex="-1">Receive</button>
+  </div>
+
+  <main>
+    <!-- SEND -->
+    <section id="panel-send" role="tabpanel" aria-labelledby="tab-send">
+      <div id="compose">
+        <label for="text">Text to send</label>
+        <textarea id="text" rows="6" placeholder="Type or paste anything here"></textarea>
+
+        <div class="filerow">
+          <input id="file" type="file" hidden>
+          <button type="button" id="pick" class="secondary">Choose a file instead</button>
+          <span id="fileinfo" class="note" hidden></span>
+          <button type="button" id="clearFile" class="link" hidden>Remove file</button>
+        </div>
+
+        <div class="options">
+          <div>
+            <label for="size">Frame size</label>
+            <select id="size">
+              <option value="120">Small, easiest to scan</option>
+              <option value="260" selected>Medium</option>
+              <option value="460">Large, needs a steady hand</option>
+              <option value="700">Extra large, fewest frames</option>
+            </select>
+          </div>
+          <div>
+            <label for="speed">Speed</label>
+            <select id="speed">
+              <option value="2">Slow, 2 per second</option>
+              <option value="5" selected>Normal, 5 per second</option>
+              <option value="10">Fast, 10 per second</option>
+              <option value="15">Faster, 15 per second</option>
+              <option value="20">Maximum, 20 per second</option>
+            </select>
+          </div>
+        </div>
+
+        <p id="speedNote" class="note" hidden>Fast speeds need good light, a bright screen and a steady hand. If the receiver misses frames, use Resend missing frames after the first pass.</p>
+
+        <button type="button" id="make" class="primary">Make QR stream</button>
+        <p id="sendError" class="error" role="alert" hidden></p>
+        <p class="note">Nothing leaves your device. Files up to 10 MB are supported, but big files take a long time (see the estimate after you tap Make).</p>
+      </div>
+
+      <div id="player" hidden>
+        <div class="stage" id="sendStage">
+          <canvas class="ring" id="sendRing" aria-hidden="true"></canvas>
+          <div class="plate"><canvas id="qr" aria-label="QR code"></canvas></div>
+        </div>
+        <p id="frameLabel" class="status" aria-live="off"></p>
+        <p id="sendHint" class="note center">Hold the other phone steady until its ring is full and green.</p>
+        <div class="controls">
+          <button type="button" id="prev" class="secondary" aria-label="Previous frame">Back</button>
+          <button type="button" id="play" class="primary">Pause</button>
+          <button type="button" id="next" class="secondary" aria-label="Next frame">Next</button>
+        </div>
+        <p id="sendStats" class="note center"></p>
+        <details id="resend" class="resend">
+          <summary>Resend missing frames</summary>
+          <label for="resendList">Frames to loop</label>
+          <input id="resendList" type="text" inputmode="numeric" autocomplete="off" placeholder="For example 12, 40-55, 300">
+          <div class="controls wide">
+            <button type="button" id="resendGo" class="primary">Loop these frames</button>
+            <button type="button" id="resendAll" class="secondary">Loop all</button>
+          </div>
+          <p id="resendError" class="error" role="alert" hidden></p>
+          <p class="note">Type the list the receiver shows under Still needed.</p>
+        </details>
+        <p class="center"><button type="button" id="edit" class="link">Send something else</button></p>
+      </div>
+    </section>
+
+    <!-- RECEIVE -->
+    <section id="panel-receive" role="tabpanel" aria-labelledby="tab-receive" hidden>
+      <div id="recvIdle">
+        <p class="lead">Open QR-Share on the other phone, tap Send, and make a QR stream. Then point this camera at its screen.</p>
+        <button type="button" id="startCam" class="primary">Start camera</button>
+        <p id="recvError" class="error" role="alert" hidden></p>
+      </div>
+
+      <div id="recvLive" hidden>
+        <div class="stage">
+          <div class="plate"><video id="cam" playsinline muted></video></div>
+          <canvas class="ring" id="recvRing" aria-hidden="true"></canvas>
+        </div>
+        <p id="recvStatus" class="status" aria-live="polite">Looking for a QR-Share code</p>
+        <p id="recvMissing" class="note center"></p>
+        <p class="center"><button type="button" id="copyMissing" class="link" hidden>Copy list of missing frames</button></p>
+        <p class="center"><button type="button" id="stopCam" class="link">Stop scanning</button></p>
+      </div>
+
+      <div id="result" hidden>
+        <h2 id="resultTitle">Received</h2>
+        <div id="resultBody"></div>
+        <div class="controls wide">
+          <button type="button" id="resultAction" class="primary"></button>
+          <button type="button" id="again" class="secondary">Scan another</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="qr-generator.js"></script>
+  <script src="encoder.js"></script>
+  <script src="decoder.js"></script>
+  <script src="qr-scanner.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
